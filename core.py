@@ -47,7 +47,7 @@ def tsne_transform(data, perplexity=30, plot=True):
         )
     return transformed
 
-def plot_feature_density(it, pixels=100, show_grid=True, title=None):
+def plot_feature_density(it, pixels=100, show_grid=True, title=None, isShow=False, folderSaving="outputImage"):
     # Update image size
     it.pixels = pixels
 
@@ -77,15 +77,16 @@ def plot_feature_density(it, pixels=100, show_grid=True, title=None):
         ax[0, 0].set_title(title, fontsize=20)
 
     plt.rcParams.update({'font.size': 14})
-    plt.show()
-
+    print("[+] save All_Feature_Density_Matrix_of_Training_Set.png")
+    plt.savefig(folderSaving + "/All_Feature_Density_Matrix_of_Training_Set.png")
+    if isShow:
+        plt.show()
+    plt.clf()
     # Feature Overlapping Counts
     gene_overlap = (
-        pd.DataFrame(all_it._coords.T).assign(count=1).groupby(
+        pd.DataFrame(it._coords.T).assign(count=1).groupby(
             [0, 1],  # (x1, y1)
             as_index=False).count())
-    print(gene_overlap["count"].describe())
-    print(gene_overlap["count"].hist())
     plt.suptitle("Feauture Overlap Counts")
 
 def plot_feature_images(it, labels, images, classes, title=None, n_cols=2, top_k_classes=0):
@@ -130,16 +131,18 @@ def plot_class_feature_images(it,
                               isShow=False,
                               folderSaving="outputImage"):
     for i in range(len(images)):
+        print("[+] save index: %d"%(index+i))
         cax = sns.heatmap(
             images[i],
             # cmap='hot',
             cmap='jet',
-            linewidth=0.001,
+            linewidth=0.1,
             linecolor='dimgrey',
             square=False,
             cbar=True)
+        cax.axis('off')
         figure = cax.get_figure()    
-        figure.savefig(folderSaving+'/%d.png'%(index+i), dpi=400)
+        figure.savefig(folderSaving+'/%d.png'%(index+i), dpi=200)
         if isShow:
             plt.show()
         plt.clf()
@@ -287,13 +290,22 @@ class NonImageToImage:
             learning_rate='auto',
             n_jobs=-1
         )
+        
 
         pixel_size = (227,227)
         all_it = image_transformer.ImageTransformer(
             feature_extractor=reducer, 
             pixels=pixel_size)
-        all_it.fit(self.train_all_features, plot=False)
 
+        resolution = 20
+        all_it.fit(self.train_all_features, plot=False)
+        plot_feature_density(
+            all_it,
+            pixels=resolution,
+            title=
+            f"All Feature Density Matrix of Training Set (Resolution: {resolution}x{resolution})",
+            folderSaving=folderSaving
+        )
         # divide to handle
         print("[+] divide to handle")
         arr = []
@@ -328,3 +340,5 @@ class NonImageToImage:
                 index=arr[i],
                 folderSaving=folderSaving
             )
+            del train_all_images
+
