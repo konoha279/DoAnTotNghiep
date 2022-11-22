@@ -90,37 +90,6 @@ def plot_feature_density(it, pixels=100, show_grid=True, title=None, isShow=Fals
             as_index=False).count())
     plt.suptitle("Feauture Overlap Counts")
 
-def plot_feature_images(it, labels, images, classes, title=None, n_cols=2, top_k_classes=0):
-    # Create subplots
-    fig, ax = plt.subplots(top_k_classes // n_cols, n_cols, figsize=(12, 12))
-
-    for i in range(0, top_k_classes // n_cols):
-        for j in range(n_cols):
-            class_rows = labels[labels[classes[i + j]] > 0]
-            # Select the random row of each class
-            sample_index = np.random.choice(class_rows.index.values, size=1)[0]
-            cax = sns.heatmap(
-                images[sample_index],
-                # cmap='hot',
-                cmap='jet',
-                linewidth=0.01,
-                linecolor='dimgrey',
-                square=False,
-                ax=ax[i, j],
-                cbar=True)
-            cax.axis('off')
-
-            ax[i, j].set_title(f"{classes[i*n_cols + j]} (index: {sample_index})",
-                               fontsize=14)
-
-    plt.rcParams.update({'font.size': 14})
-    if title is not None:
-        plt.suptitle(title, fontsize=20)
-
-    plt.tight_layout()
-    fig.subplots_adjust(top=0.9)
-    plt.show()
-
 def convertToImage(images,
                     nameLabel="Unknown",
                     index=0,
@@ -141,70 +110,6 @@ def convertToImage(images,
     figure.savefig(folderSaving+'/%s_%d.png'%(nameLabel, index), dpi=200)
     if isShow:
         plt.show()
-
-class LogScaler:
-    """Log normalize and scale data
-
-    Log normalization and scaling procedure as described as norm-2 in the
-    DeepInsight paper supplementary information.
-    
-    Note: The dimensions of input matrix is (N samples, d features)
-    """
-    def __init__(self):
-        self._min0 = None
-        self._max = None
-
-    """
-    Use this as a preprocessing step in inference mode.
-    """
-    def fit(self, X, y=None):
-        # Min. of training set per feature
-        self._min0 = X.min(axis=0)
-
-        # Log normalized X by log(X + _min0 + 1)
-        X_norm = np.log(
-            X +
-            np.repeat(np.abs(self._min0)[np.newaxis, :], X.shape[0], axis=0) +
-            1).clip(min=0, max=None)
-
-        # Global max. of training set from X_norm
-        self._max = X_norm.max()
-
-    """
-    For training set only.
-    """
-    def fit_transform(self, X, y=None):
-        # Min. of training set per feature
-        self._min0 = X.min(axis=0)
-
-        # Log normalized X by log(X + _min0 + 1)
-        X_norm = np.log(
-            X +
-            np.repeat(np.abs(self._min0)[np.newaxis, :], X.shape[0], axis=0) +
-            1).clip(min=0, max=None)
-
-        # Global max. of training set from X_norm
-        self._max = X_norm.max()
-
-        # Normalized again by global max. of training set
-        return (X_norm / self._max).clip(0, 1)
-
-    """
-    For validation and test set only.
-    """
-    def transform(self, X, y=None):
-        # Adjust min. of each feature of X by _min0
-        for i in range(X.shape[1]):
-            X[:, i] = X[:, i].clip(min=self._min0[i], max=None)
-
-        # Log normalized X by log(X + _min0 + 1)
-        X_norm = np.log(
-            X +
-            np.repeat(np.abs(self._min0)[np.newaxis, :], X.shape[0], axis=0) +
-            1).clip(min=0, max=None)
-
-        # Normalized again by global max. of training set
-        return (X_norm / self._max).clip(0, 1)
 
 class NonImageToImage:
     def __init__(self, file):
