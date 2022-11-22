@@ -121,32 +121,26 @@ def plot_feature_images(it, labels, images, classes, title=None, n_cols=2, top_k
     fig.subplots_adjust(top=0.9)
     plt.show()
 
-def plot_class_feature_images(it,
-                              labels,
-                              images,
-                              target_class,
-                              title=None,
-                              n_rows=2,
-                              n_cols=2,
-                              index=0,
-                              isShow=False,
-                              folderSaving="outputImage"):
-    for i in range(len(images)):
-        plt.clf()
-        cax = sns.heatmap(
-            images[i],
-            # cmap='hot',
-            cmap='jet',
-            linewidth=0.1,
-            linecolor='dimgrey',
-            square=False,
-            cbar=False)
-        cax.axis('off')
-        figure = cax.get_figure()    
-        plt.subplots_adjust(left=0, bottom=0, right=1, top=1)
-        figure.savefig(folderSaving+'/%d.png'%(index+i), dpi=200)
-        if isShow:
-            plt.show()
+def convertToImage(images,
+                    nameLabel="Unknown",
+                    index=0,
+                    isShow=False,
+                    folderSaving="outputImage"):
+    plt.clf()
+    cax = sns.heatmap(
+        images[index],
+        # cmap='hot',
+        cmap='jet',
+        linewidth=0.1,
+        linecolor='dimgrey',
+        square=False,
+        cbar=False)
+    cax.axis('off')
+    figure = cax.get_figure()    
+    plt.subplots_adjust(left=0, bottom=0, right=1, top=1)
+    figure.savefig(folderSaving+'/%s_%d.png'%(nameLabel, index), dpi=200)
+    if isShow:
+        plt.show()
 
 class LogScaler:
     """Log normalize and scale data
@@ -231,7 +225,7 @@ class NonImageToImage:
                 self.csv[' Flow Packets/s'][i]= '2000001'
 
         self.csv.replace([np.inf, -np.inf], np.nan, inplace=True)
-        rowsNan = list(self.csv[self.csv.isna().any(axis=1)].index)
+        self.rowsNan = list(self.csv[self.csv.isna().any(axis=1)].index)
         self.csv.dropna(inplace=True)
 
         keysAttack = ["Heartbleed", "Web Attack Sql Injection", "Infiltration", "Web Attack XSS" "Web Attack Brute Force"
@@ -241,10 +235,7 @@ class NonImageToImage:
         for k in keysAttack:
             dfTmp=self.csv[self.csv[' Label']==k].drop([' Label'],axis=1)
             if len(dfTmp) != 0:
-                # reset index
-                dfTmp.reset_index(drop=True, inplace=True)
-                self.dfs.append({"data": dfTmp, "key": k})
-        del self.csv
+                self.dfs.append({"index": dfTmp.index, "key": k})
 
 
     def getTrain_all_features(self):
@@ -273,8 +264,45 @@ class NonImageToImage:
         return class_counts
 
     def convert2Image(self, isShow=False, folderSaving="outputImage"):
+        if not os.path.exists(folderSaving):
+                os.makedirs(folderSaving)
+
         featuresNotConvert = ['Flow ID', 'Source IP', 'Source Port', 'Destination IP', 'Destination Port', 'Protocol', 'Timestamp', 'Label']
-        
+        print("[+] get name collected column")
+        numeric_features = [c for c in self.csv.columns if c.strip() not in featuresNotConvert]
+        print("[+] get name unselected columns")
+        expert_features  = [c for c in self.csv.columns if c.strip() in featuresNotConvert]
+
+        kfolds = 10
+        skf = MultilabelStratifiedKFold(n_splits=kfolds,
+                                        shuffle=True,
+                                        random_state=20)
+        print("[+] get selected columns data")
+        tmpCsv = self.csv
+        for f in expert_features:
+            tmpCsv = tmpCsv.drop(f, axis=1)
+        self.train_classes = [c for c in tmpCsv.columns]
+
+        label_counts = np.sum(tmpCsv, axis=0)
+        y_labels = label_counts.index.tolist()
+
+        self.train_index, self.val_index = list(skf.split(self.csv, self.csv[y_labels]))[0]
+        self.train_index = np.setdiff1d(self.train_index, np.array(self.rowsNan))
+        self.val_index = np.setdiff1d(self.val_index, np.array(self.rowsNan))
+
+        print("[+] train data")
+        self.train_all_features = self.csv.loc[self.train_index, numeric_features].copy().reset_index(drop=True).values
+        self.valid_all_features = self.csv.loc[self.val_index, numeric_features].copy().reset_index(drop=True).values
+
+        self.test_all_features = self.csv[numeric_features].copy().reset_index(drop=True).values
+
+        print("[+] transform data train")
+        all_scaler = image_transformer.LogScaler()
+        self.train_all_features = all_scaler.fit_transform(self.train_all_features)
+        self.valid_all_features = all_scaler.transform(self.valid_all_features)
+        self.test_all_features = all_scaler.transform(self.test_all_features)
+        # train_all_tsne = tsne_transform(train_all_features, perplexity=5)
+
         distance_metric = 'cosine'
         reducer = TSNE(
             n_components=2,
@@ -283,98 +311,58 @@ class NonImageToImage:
             learning_rate='auto',
             n_jobs=-1
         )
+        
 
-        skf = MultilabelStratifiedKFold(n_splits=10,
-                                        shuffle=True,
-                                        random_state=20)
-        pixel_size = (255,255)
+        pixel_size = (227,227)
         all_it = image_transformer.ImageTransformer(
             feature_extractor=reducer, 
             pixels=pixel_size)
-        resolution = 50
-        tmpfolderSaving = folderSaving
+
+        resolution = 20
+        all_it.fit(self.train_all_features, plot=False)
+        plot_feature_density(
+            all_it,
+            pixels=resolution,
+            title=
+            f"All Feature Density Matrix of Training Set (Resolution: {resolution}x{resolution})",
+            folderSaving=folderSaving
+        )
+        # divide to handle
+        print("[+] divide to handle")
+        arr = []
+        index = (len(self.train_all_features) // 10000) + 1
+        for i in range(0, index):
+            arr.append(i*10000)
+        arr.append(len(self.train_all_features))
+        print("[+] Have %d part"%(len(arr)-1))
+
+        # divide to handle
+        print("[+] divide to handle")
+        arr = []
+        index = (len(self.train_all_features) // 10000) + 1
+        for i in range(0, index):
+            arr.append(i*10000)
+        arr.append(len(self.train_all_features))
+        print("[+] Have %d part"%(len(arr)-1))
+
         
-        for distDf in self.dfs:
-            df = distDf['data']
-            key = distDf['key']
-            print("[!] Type attack: %s"%(key))
-            # print(df)
-            folderSaving = "%s/%s/"%(tmpfolderSaving, key)
-            # print("save at %s"%(folderSaving))
-            if not os.path.exists(os.path.abspath(folderSaving)):
-                os.makedirs(os.path.abspath(folderSaving))
+        for i in range(0, len(arr) - 1):
+            print("[+] Tranform to image part %d"%(i))
+            train_all_images = all_it.transform(self.train_all_features[arr[i]:arr[i+1]], empty_value=0, format="scalar")
 
-            print("[+] get name collected column")
-            numeric_features = [c for c in df.columns if c.strip() not in featuresNotConvert]
-            print("[+] get name unselected columns")
-            expert_features  = [c for c in df.columns if c.strip() in featuresNotConvert]
+            for distDf in self.dfs:
+                indexs = distDf['index']
+                label = distDf['key']
 
+                for j in indexs:
+                    if j < arr[i] or j >= arr[i+1]:
+                        continue
 
-            print("[+] get selected columns data")
-            tmpCsv = df
-            for f in expert_features:
-                tmpCsv = tmpCsv.drop(f, axis=1)
-            self.train_classes = [c for c in tmpCsv.columns]
-
-            label_counts = np.sum(tmpCsv, axis=0)
-            y_labels = label_counts.index.tolist()
-            # print(y_labels)
-
-            self.train_index, self.val_index = list(skf.split(df, df[y_labels]))[0]
-            print("[+] train data")
-            self.train_all_features = df.loc[self.train_index, numeric_features].copy().reset_index(drop=True).values
-            self.valid_all_features = df.loc[self.val_index, numeric_features].copy().reset_index(drop=True).values
-
-            self.test_all_features = df[numeric_features].copy().reset_index(drop=True).values
-            print("[+] transform data train")
-            all_scaler = image_transformer.LogScaler()
-            self.train_all_features = all_scaler.fit_transform(self.train_all_features)
-            self.valid_all_features = all_scaler.transform(self.valid_all_features)
-            self.test_all_features = all_scaler.transform(self.test_all_features)
-            # train_all_tsne = tsne_transform(train_all_features, perplexity=5)
-
-
-            all_it.fit(self.train_all_features, plot=False)
-            plot_feature_density(
-                all_it,
-                pixels=resolution,
-                title=
-                f"{key} (Resolution: {resolution}x{resolution})",
-                folderSaving=folderSaving
-            )
-            # divide to handle
-            print("[+] divide to handle")
-            arr = []
-            index = (len(self.train_all_features) // 10000) + 1
-            for i in range(0, index):
-                arr.append(i*10000)
-            arr.append(len(self.train_all_features))
-            print("[+] Have %d part"%(len(arr)-1))
-
-            for i in range(0, len(arr) - 1):
-                print("[+] Tranform to image part %d"%(i))
-                train_all_images = all_it.transform(self.train_all_features[arr[i]:arr[i+1]], empty_value=0, format="scalar")
-                global top_k_classes
-                top_k_classes = 2
-                class_counts = df[self.train_classes].sum().to_frame(
-                    name="count").reset_index().rename(columns={"index": "class"})
-                class_counts = class_counts.sort_values(by="count",
-                                                        ascending=False).reset_index(drop=True)
-                sample_labels = df.iloc[self.train_index, :].copy().reset_index(drop=True)
-                sample_labels = sample_labels[
-                    class_counts["class"].values.tolist()]
-                sample_labels = sample_labels[sample_labels.sum(axis=1) > 0]
-
-                class_index = 3
-                top_classes = class_counts["class"].values.tolist()
-                plot_class_feature_images(
-                    all_it,
-                    sample_labels,
-                    train_all_images,
-                    target_class=top_classes[class_index],
-                    isShow=isShow,
-                    index=arr[i],
-                    folderSaving=folderSaving
-                )
-                del train_all_images
-
+                    convertToImage(
+                        train_all_images,
+                        nameLabel=label,
+                        isShow=isShow,
+                        index=j,
+                        folderSaving=folderSaving
+                    )
+            del train_all_images

@@ -29,8 +29,6 @@ def main():
         folderName = tmp.split('/')[len(tmp.split('/')) - 1]
         if not os.path.exists(OUTPUTPATH + '/'+folderName):
             os.makedirs(OUTPUTPATH + '/'+folderName)
-    print("[+] %s"%(folderName))
-
 
     a = find("*.csv", FULLPATH)
 
@@ -40,7 +38,6 @@ def main():
 
             nameFile = tmp.split('\\')[len(tmp.split('\\')) - 1]
             nameFile = nameFile.split('.')[0]
-            print(nameFile)
             if not os.path.exists(OUTPUTPATH + '\\'+folderName+'\\'+nameFile):
                 os.makedirs(OUTPUTPATH + '\\'+folderName+'\\'+nameFile)
             nonImg = NonImageToImage(tmp)
@@ -50,7 +47,6 @@ def main():
 
             nameFile = tmp.split('/')[len(tmp.split('/')) - 1]
             nameFile = nameFile.split('.')[0]
-            print(nameFile)
             if not os.path.exists(OUTPUTPATH + '/'+folderName+'/'+nameFile):
                 os.makedirs(OUTPUTPATH + '/'+folderName+'/'+nameFile)
             nonImg = NonImageToImage(tmp)
