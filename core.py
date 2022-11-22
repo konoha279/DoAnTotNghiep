@@ -318,7 +318,7 @@ class NonImageToImage:
             feature_extractor=reducer, 
             pixels=pixel_size)
 
-        resolution = 20
+        resolution = 50
         all_it.fit(self.train_all_features, plot=False)
         plot_feature_density(
             all_it,
