@@ -1,5 +1,6 @@
 from core import *
 import fnmatch
+import platform
 import os
 import sys
 def find(pattern, path):
@@ -20,23 +21,40 @@ def main():
     if not os.path.exists(OUTPUTPATH):
         os.makedirs(OUTPUTPATH)
     tmp = os.path.abspath(sys.argv[1])
-    folderName = tmp.split('/')[len(tmp.split('/')) - 1]
-    if not os.path.exists(OUTPUTPATH + '/'+folderName):
-        os.mkdir(OUTPUTPATH + '/'+folderName,0o777)
+    if platform.system() == "Windows":
+        folderName = tmp.split('\\')[len(tmp.split('\\')) - 1]
+        if not os.path.exists(OUTPUTPATH + '\\'+folderName):
+            os.makedirs(OUTPUTPATH + '\\'+folderName)
+    else:
+        folderName = tmp.split('/')[len(tmp.split('/')) - 1]
+        if not os.path.exists(OUTPUTPATH + '/'+folderName):
+            os.makedirs(OUTPUTPATH + '/'+folderName)
+    print("[+] %s"%(folderName))
+
 
     a = find("*.csv", FULLPATH)
 
     for i in a:
-        tmp = os.path.abspath(i)
+        if platform.system() == "Windows":
+            tmp = os.path.abspath(i)
 
-        nameFile = tmp.split('/')[len(tmp.split('/')) - 1]
-        nameFile = nameFile.split('.')[0]
-        print(nameFile)
-        if not os.path.exists(OUTPUTPATH + '/'+folderName+'/'+nameFile):
-            os.mkdir(OUTPUTPATH + '/'+folderName+'/'+nameFile,0o777)
-        nonImg = NonImageToImage(tmp)
-        nonImg.convert2Image(folderSaving=OUTPUTPATH + '/'+folderName+'/'+nameFile, isShow=False)
+            nameFile = tmp.split('\\')[len(tmp.split('\\')) - 1]
+            nameFile = nameFile.split('.')[0]
+            print(nameFile)
+            if not os.path.exists(OUTPUTPATH + '\\'+folderName+'\\'+nameFile):
+                os.makedirs(OUTPUTPATH + '\\'+folderName+'\\'+nameFile)
+            nonImg = NonImageToImage(tmp)
+            nonImg.convert2Image(folderSaving=OUTPUTPATH + '\\'+folderName+'\\'+nameFile, isShow=False)
+        else:
+            tmp = os.path.abspath(i)
 
+            nameFile = tmp.split('/')[len(tmp.split('/')) - 1]
+            nameFile = nameFile.split('.')[0]
+            print(nameFile)
+            if not os.path.exists(OUTPUTPATH + '/'+folderName+'/'+nameFile):
+                os.makedirs(OUTPUTPATH + '/'+folderName+'/'+nameFile)
+            nonImg = NonImageToImage(tmp)
+            nonImg.convert2Image(folderSaving=OUTPUTPATH + '/'+folderName+'/'+nameFile, isShow=False)
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
