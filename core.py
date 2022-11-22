@@ -335,16 +335,6 @@ class NonImageToImage:
             arr.append(i*10000)
         arr.append(len(self.train_all_features))
         print("[+] Have %d part"%(len(arr)-1))
-
-        # divide to handle
-        print("[+] divide to handle")
-        arr = []
-        index = (len(self.train_all_features) // 10000) + 1
-        for i in range(0, index):
-            arr.append(i*10000)
-        arr.append(len(self.train_all_features))
-        print("[+] Have %d part"%(len(arr)-1))
-
         
         for i in range(0, len(arr) - 1):
             print("[+] Tranform to image part %d"%(i))
