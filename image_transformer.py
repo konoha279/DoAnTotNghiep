@@ -170,7 +170,7 @@ class ImageTransformer:
         for z in range(2, img_coords.shape[1]):
             img_matrix = blank_mat.copy()
             img_matrix[img_coords[0].astype(int),
-                       img_coords[1].astype(int)] = img_coords[z]
+                       img_coords[1].astype(int)] = img_coords[z].astype(np.float64)
             img_matrices.append(img_matrix)
 
         if format=='rgb':
