@@ -168,7 +168,7 @@ class NonImageToImage:
                                                 ascending=False).reset_index(drop=True)
         return class_counts
 
-    def convert2Image(self, isShow=False, folderSaving="outputImage"):
+    def convert2Image(self, isShow=False, folderSaving="outputImage", isSave=False):
         if not os.path.exists(folderSaving):
                 os.makedirs(folderSaving)
 
@@ -219,19 +219,23 @@ class NonImageToImage:
         
 
         pixel_size = (227,227)
-        all_it = image_transformer.ImageTransformer(
+        self.all_it = image_transformer.ImageTransformer(
             feature_extractor=reducer, 
             pixels=pixel_size)
 
         resolution = 50
-        all_it.fit(self.train_all_features, plot=False)
+        self.all_it.fit(self.train_all_features, plot=False)
         plot_feature_density(
-            all_it,
+            self.all_it,
             pixels=resolution,
             title=
             f"All Feature Density Matrix of Training Set (Resolution: {resolution}x{resolution})",
             folderSaving=folderSaving
         )
+
+        if not isSave:
+            return
+
         # divide to handle
         print("[+] divide to handle")
         arr = []
@@ -240,11 +244,11 @@ class NonImageToImage:
             arr.append(i*10000)
         arr.append(len(self.train_all_features))
         print("[+] Have %d part"%(len(arr)-1))
-        
+        self.train_all_images = []
         for i in range(0, len(arr) - 1):
             print("[+] Tranform to image part %d"%(i))
-            train_all_images = all_it.transform(self.train_all_features[arr[i]:arr[i+1]], empty_value=0, format="scalar")
-
+            train_all_images = self.all_it.transform(self.train_all_features[arr[i]:arr[i+1]], empty_value=0, format="scalar")
+            self.train_all_images += train_all_images
             for distDf in self.dfs:
                 indexs = distDf['index']
                 label = distDf['key']
@@ -261,3 +265,9 @@ class NonImageToImage:
                         folderSaving=folderSaving
                     )
             del train_all_images
+
+    def getTrain_all_images(self):
+        return self.all_it.transform(self.train_all_features, empty_value=0, format="rgb")
+
+    def getTest_all_features(self):
+        return self.all_it.transform(self.test_all_features, empty_value=0, format="rgb")
