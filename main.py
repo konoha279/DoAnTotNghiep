@@ -146,13 +146,15 @@ def showImage_Test(it, X_train_img, y_train):
 
     plt.figure(figsize=(10, 7.5))
 
-    cax = sns.heatmap(fdm, cmap="viridis", linewidths=0.01, 
+    cax = sns.heatmap(fdm, cmap="viridis", linewidths=0.1, 
                     linecolor="lightgrey", square=True)
     cax.xaxis.set_major_locator(ticker.MultipleLocator(5))
     cax.yaxis.set_major_locator(ticker.MultipleLocator(5))
     for _, spine in cax.spines.items():
         spine.set_visible(True)
-
+    plt.show()
+    # cax = sns.heatmap(fdm, cmap="viridis", linewidths=0.01, ax=ax[i],
+    #                 linecolor="lightgrey", square=True)
     fig, ax = plt.subplots(1, 3, figsize=(15, 5))
     for i in range(0,3):
         ax[i].imshow(X_train_img[i])
@@ -200,7 +202,7 @@ def main():
         arr.append(i*10000)
     arr.append(len(X_train_norm))
     print("[+] Have %d part"%(len(arr)-1))
-    
+
     for i in range(0, len(arr) - 1):
         print("[+] Handle part %d"%(i))
         print("[+] transform to image")
