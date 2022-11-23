@@ -175,14 +175,6 @@ def main():
     X_train_norm, X_test_norm, y_train, y_test = convert(csv)
     X_test_img = it.transform(X_test_norm)
 
-    print("[+] divide to handle")
-    arr = []
-    index = (len(X_train_norm) // 10000) + 1
-    for i in range(0, index):
-        arr.append(i*10000)
-    arr.append(len(X_train_norm))
-    print("[+] Have %d part"%(len(arr)-1))
-
     print("[+] create resnet18")
     model_resnet18 = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
     model_resnet18 = model_resnet18.to(device)
@@ -200,6 +192,15 @@ def main():
     model_resnet34 = model_resnet34.to(device)
     criterion_resnet34  = nn.CrossEntropyLoss()
     optimizer_resnet34  = optim.SGD(model_resnet34.parameters(), lr=0.001, momentum=0.9)
+
+    print("[+] divide to handle")
+    arr = []
+    index = (len(X_train_norm) // 10000) + 1
+    for i in range(0, index):
+        arr.append(i*10000)
+    arr.append(len(X_train_norm))
+    print("[+] Have %d part"%(len(arr)-1))
+    
     for i in range(0, len(arr) - 1):
         print("[+] Handle part %d"%(i))
         print("[+] transform to image")
