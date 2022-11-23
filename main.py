@@ -133,7 +133,7 @@ def CNNTrainDataset(model, optimizer, criterion, X_train_tensor, trainloader, te
             pred = torch.max(model(inputs),1)[1].cpu().detach().numpy()
             test_predicted = np.append(test_predicted, pred)
             test_true = np.append(test_true, labels.cpu().detach().numpy())
-
+    
     print(f"The train accuracy was {accuracy_score(train_predicted, train_true):.3f}")
     print(f"The test accuracy was {accuracy_score(test_predicted, test_true):.3f}")
     return model
@@ -183,22 +183,31 @@ def main():
     arr.append(len(X_train_norm))
     print("[+] Have %d part"%(len(arr)-1))
 
+    print("[+] create resnet18")
+    model_resnet18 = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
+    model_resnet18 = model_resnet18.to(device)
+    criterion_resnet18  = nn.CrossEntropyLoss()
+    optimizer_resnet18  = optim.SGD(model_resnet18.parameters(), lr=0.001, momentum=0.9)
 
+    print("[+] create vgg")
+    model_vgg = torch.hub.load('pytorch/vision:v0.10.0', 'vgg11', pretrained=True)
+    model_vgg = model_vgg.to(device)
+    criterion_vgg  = nn.CrossEntropyLoss()
+    optimizer_vgg  = optim.SGD(model_vgg.parameters(), lr=0.001, momentum=0.9)
+
+    print("[+] create resnet34")
+    model_resnet34 = torch.hub.load('pytorch/vision:v0.10.0', 'resnet34', pretrained=True)
+    model_resnet34 = model_resnet34.to(device)
+    criterion_resnet34  = nn.CrossEntropyLoss()
+    optimizer_resnet34  = optim.SGD(model_resnet34.parameters(), lr=0.001, momentum=0.9)
     for i in range(0, len(arr) - 1):
         print("[+] Handle part %d"%(i))
         print("[+] transform to image")
         X_train_img = it.transform(X_train_norm[arr[i]:arr[i+1]], empty_value=0, format="rgb")
-
         # showImage_Test(it, X_train_img, y_train)
-
         print("[+] pre train data Image")
         X_train_tensor, trainloader, testloader = preTrainData(X_train_img, X_test_img, y_train, y_test)
 
-        print("[+] create resnet18")
-        model_resnet18 = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
-        model_resnet18 = model_resnet18.to(device)
-        criterion_resnet18  = nn.CrossEntropyLoss()
-        optimizer_resnet18  = optim.SGD(model_resnet18.parameters(), lr=0.001, momentum=0.9)
         print("[+] resnet18 training data")
         model_resnet18 = CNNTrainDataset(model_resnet18, 
                                     optimizer_resnet18, 
@@ -206,13 +215,7 @@ def main():
                                     X_train_tensor, 
                                     trainloader, 
                                     testloader, 
-                                    num_epochs=30)
-        
-        print("[+] create resnet34")
-        model_resnet34 = torch.hub.load('pytorch/vision:v0.10.0', 'resnet34', pretrained=True)
-        model_resnet34 = model_resnet34.to(device)
-        criterion_resnet34  = nn.CrossEntropyLoss()
-        optimizer_resnet34  = optim.SGD(model_resnet34.parameters(), lr=0.001, momentum=0.9)
+                                    num_epochs=1)
         print("[+] resnet34 training data")
         model_resnet34 = CNNTrainDataset(model_resnet34, 
                                     optimizer_resnet34, 
@@ -222,11 +225,6 @@ def main():
                                     testloader, 
                                     num_epochs=30)
 
-        print("[+] create vgg")
-        model_vgg = torch.hub.load('pytorch/vision:v0.10.0', 'vgg11', pretrained=True)
-        model_vgg = model_vgg.to(device)
-        criterion_vgg  = nn.CrossEntropyLoss()
-        optimizer_vgg  = optim.SGD(model_vgg.parameters(), lr=0.001, momentum=0.9)
         print("[+] vgg training data")
         model_vgg = CNNTrainDataset(model_vgg, 
                                 optimizer_vgg, 
@@ -235,6 +233,11 @@ def main():
                                 trainloader, 
                                 testloader, 
                                 num_epochs=30)
+        # break
+    print("[+] Save cnn module")
+    torch.save(model_resnet18, "resnet18.pth")
+    torch.save(model_resnet34, "resnet34.pth")
+    torch.save(model_vgg, "vgg.pth")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
