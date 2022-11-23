@@ -218,7 +218,7 @@ def main():
                                     X_train_tensor, 
                                     trainloader, 
                                     testloader, 
-                                    num_epochs=30)
+                                    num_epochs=2)
         print("[+] resnet34 training data")
         model_resnet34 = CNNTrainDataset(model_resnet34, 
                                     optimizer_resnet34, 
@@ -226,7 +226,7 @@ def main():
                                     X_train_tensor, 
                                     trainloader, 
                                     testloader, 
-                                    num_epochs=30)
+                                    num_epochs=2)
 
         print("[+] vgg training data")
         model_vgg = CNNTrainDataset(model_vgg, 
@@ -235,7 +235,7 @@ def main():
                                 X_train_tensor, 
                                 trainloader, 
                                 testloader, 
-                                num_epochs=30)
+                                num_epochs=2)
         # break
     print("[+] Save cnn module")
     torch.save(model_resnet18, "resnet18.pth")
