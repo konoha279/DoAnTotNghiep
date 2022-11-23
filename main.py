@@ -215,7 +215,7 @@ def main():
                                     X_train_tensor, 
                                     trainloader, 
                                     testloader, 
-                                    num_epochs=1)
+                                    num_epochs=30)
         print("[+] resnet34 training data")
         model_resnet34 = CNNTrainDataset(model_resnet34, 
                                     optimizer_resnet34, 
