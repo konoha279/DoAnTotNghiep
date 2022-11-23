@@ -43,7 +43,7 @@ def handleCsv(csv):
         csv = csv.drop(f, axis=1)
     return csv
 
-def convertImage(csv):
+def convert(csv):
     y = csv[' Label'].values
     X = csv.iloc[:, :len(csv.columns)-1].values
     X_train, X_test, y_train, y_test = train_test_split(
@@ -74,10 +74,7 @@ def convertImage(csv):
         feature_extractor=reducer, 
         pixels=pixel_size)
     it.fit(X_train, y=y_train, plot=False)
-    X_train_img = it.transform(X_train_norm, empty_value=0, format="rgb")
-    X_test_img = it.transform(X_test_norm)
-    # showImage_Test(it, X_train_img, y_train)
-    return X_train_img, X_test_img, y_train, y_test
+    return X_train_norm, X_test_norm, y_train, y_test
 
 def preTrainData(X_train_img, X_test_img, y_train, y_test):
     X_train_tensor = torch.stack([preprocess(img) for img in X_train_img]).float().to(device)
@@ -175,52 +172,69 @@ def main():
     print("[+] handle NaN and Infinity value in file csv")
     csv = handleCsv(csv)
     print("[+] convert dataset to images")
-    X_train_img, X_test_img, y_train, y_test = convertImage(csv)
+    X_train_norm, X_test_norm, y_train, y_test = convert(csv)
+    X_test_img = it.transform(X_test_norm)
 
-    print("[+] pre train data Image")
-    X_train_tensor, trainloader, testloader = preTrainData(X_train_img, X_test_img, y_train, y_test)
+    print("[+] divide to handle")
+    arr = []
+    index = (len(X_train_norm) // 10000) + 1
+    for i in range(0, index):
+        arr.append(i*10000)
+    arr.append(len(X_train_norm))
+    print("[+] Have %d part"%(len(arr)-1))
 
-    print("[+] create resnet18")
-    model_resnet18 = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
-    model_resnet18 = model_resnet18.to(device)
-    criterion_resnet18  = nn.CrossEntropyLoss()
-    optimizer_resnet18  = optim.SGD(model_resnet18.parameters(), lr=0.001, momentum=0.9)
-    print("[+] resnet18 training data")
-    model_resnet18 = CNNTrainDataset(model_resnet18, 
-                                optimizer_resnet18, 
-                                criterion_resnet18, 
+
+    for i in range(0, len(arr) - 1):
+        print("[+] Handle part %d"%(i))
+        print("[+] transform to image")
+        X_train_img = it.transform(X_train_norm[arr[i]:arr[i+1]], empty_value=0, format="rgb")
+
+        # showImage_Test(it, X_train_img, y_train)
+
+        print("[+] pre train data Image")
+        X_train_tensor, trainloader, testloader = preTrainData(X_train_img, X_test_img, y_train, y_test)
+
+        print("[+] create resnet18")
+        model_resnet18 = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
+        model_resnet18 = model_resnet18.to(device)
+        criterion_resnet18  = nn.CrossEntropyLoss()
+        optimizer_resnet18  = optim.SGD(model_resnet18.parameters(), lr=0.001, momentum=0.9)
+        print("[+] resnet18 training data")
+        model_resnet18 = CNNTrainDataset(model_resnet18, 
+                                    optimizer_resnet18, 
+                                    criterion_resnet18, 
+                                    X_train_tensor, 
+                                    trainloader, 
+                                    testloader, 
+                                    num_epochs=30)
+        
+        print("[+] create resnet34")
+        model_resnet34 = torch.hub.load('pytorch/vision:v0.10.0', 'resnet34', pretrained=True)
+        model_resnet34 = model_resnet34.to(device)
+        criterion_resnet34  = nn.CrossEntropyLoss()
+        optimizer_resnet34  = optim.SGD(model_resnet34.parameters(), lr=0.001, momentum=0.9)
+        print("[+] resnet34 training data")
+        model_resnet34 = CNNTrainDataset(model_resnet34, 
+                                    optimizer_resnet34, 
+                                    criterion_resnet34, 
+                                    X_train_tensor, 
+                                    trainloader, 
+                                    testloader, 
+                                    num_epochs=30)
+
+        print("[+] create vgg")
+        model_vgg = torch.hub.load('pytorch/vision:v0.10.0', 'vgg11', pretrained=True)
+        model_vgg = model_vgg.to(device)
+        criterion_vgg  = nn.CrossEntropyLoss()
+        optimizer_vgg  = optim.SGD(model_vgg.parameters(), lr=0.001, momentum=0.9)
+        print("[+] vgg training data")
+        model_vgg = CNNTrainDataset(model_vgg, 
+                                optimizer_vgg, 
+                                criterion_vgg, 
                                 X_train_tensor, 
                                 trainloader, 
                                 testloader, 
                                 num_epochs=30)
-    
-    print("[+] create resnet34")
-    model_resnet34 = torch.hub.load('pytorch/vision:v0.10.0', 'resnet34', pretrained=True)
-    model_resnet34 = model_resnet34.to(device)
-    criterion_resnet34  = nn.CrossEntropyLoss()
-    optimizer_resnet34  = optim.SGD(model_resnet34.parameters(), lr=0.001, momentum=0.9)
-    print("[+] resnet34 training data")
-    model_resnet34 = CNNTrainDataset(model_resnet34, 
-                                optimizer_resnet34, 
-                                criterion_resnet34, 
-                                X_train_tensor, 
-                                trainloader, 
-                                testloader, 
-                                num_epochs=30)
-
-    print("[+] create vgg")
-    model_vgg = torch.hub.load('pytorch/vision:v0.10.0', 'vgg11', pretrained=True)
-    model_vgg = model_vgg.to(device)
-    criterion_vgg  = nn.CrossEntropyLoss()
-    optimizer_vgg  = optim.SGD(model_vgg.parameters(), lr=0.001, momentum=0.9)
-    print("[+] vgg training data")
-    model_vgg = CNNTrainDataset(model_vgg, 
-                            optimizer_vgg, 
-                            criterion_vgg, 
-                            X_train_tensor, 
-                            trainloader, 
-                            testloader, 
-                            num_epochs=30)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -230,7 +244,5 @@ if __name__ == "__main__":
     preprocess = transforms.Compose([
         transforms.ToTensor()
     ])
-
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
     main()
